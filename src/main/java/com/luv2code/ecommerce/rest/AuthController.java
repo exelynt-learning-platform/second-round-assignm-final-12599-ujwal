@@ -41,20 +41,14 @@ public class AuthController {
             );
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (RuntimeException e) {
-            Map<String, String> err = new HashMap<>();
             String msg = e.getMessage();
+            HttpStatus status = HttpStatus.BAD_REQUEST;
             if (msg != null && msg.contains("Username taken")) {
-                err.put("error", "Username already taken");
+                return ResponseEntity.status(status).body(Map.of("error", "Username already taken", "code", "USERNAME_TAKEN"));
             } else if (msg != null && msg.contains("Email already")) {
-                err.put("error", "Email already registered");
-            } else {
-                err.put("error", "Registration failed");
+                return ResponseEntity.status(status).body(Map.of("error", "Email already registered", "code", "EMAIL_TAKEN"));
             }
-            return ResponseEntity.badRequest().body(err);
-        } catch (Exception e) {
-            Map<String, String> err = new HashMap<>();
-            err.put("error", "Registration failed");
-            return ResponseEntity.badRequest().body(err);
+            return ResponseEntity.status(status).body(Map.of("error", "Registration failed", "code", "REGISTRATION_ERROR"));
         }
     }
 
@@ -66,13 +60,13 @@ public class AuthController {
             res.put("token", token);
             return ResponseEntity.ok(res);
         } catch (RuntimeException e) {
-            Map<String, String> err = new HashMap<>();
-            err.put("error", "Invalid credentials");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(err);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                Map.of("error", "Invalid credentials", "code", "INVALID_CREDENTIALS")
+            );
         } catch (Exception e) {
-            Map<String, String> err = new HashMap<>();
-            err.put("error", "Authentication failed");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(err);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                Map.of("error", "Authentication failed", "code", "AUTH_ERROR")
+            );
         }
     }
 
@@ -82,12 +76,12 @@ public class AuthController {
             User u = authService.getCurrentUser();
             if (u == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Not authenticated"));
+                    .body(Map.of("error", "Not authenticated", "code", "NOT_AUTHENTICATED"));
             }
             return ResponseEntity.ok(u);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to retrieve user profile"));
+                .body(Map.of("error", "Failed to retrieve user profile", "code", "PROFILE_ERROR"));
         }
     }
 
