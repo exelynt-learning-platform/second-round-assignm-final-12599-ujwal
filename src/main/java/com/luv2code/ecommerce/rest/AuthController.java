@@ -25,6 +25,13 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    /**
+     * Helper method to create consistent error response
+     */
+    private Map<String, Object> createErrorResponse(String error, String code) {
+        return Map.of("error", error, "code", code);
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req, BindingResult binding) {
         if (binding.hasErrors()) {
@@ -49,14 +56,14 @@ public class AuthController {
             String msg = e.getMessage();
             HttpStatus status = HttpStatus.BAD_REQUEST;
             if (msg != null && msg.contains("Username")) {
-                return ResponseEntity.status(status).body(Map.of("error", "Username already taken", "code", "USERNAME_TAKEN"));
+                return ResponseEntity.status(status).body(createErrorResponse("Username already taken", "USERNAME_TAKEN"));
             } else if (msg != null && msg.contains("Email")) {
-                return ResponseEntity.status(status).body(Map.of("error", "Email already registered", "code", "EMAIL_TAKEN"));
+                return ResponseEntity.status(status).body(createErrorResponse("Email already registered", "EMAIL_TAKEN"));
             }
-            return ResponseEntity.status(status).body(Map.of("error", e.getMessage(), "code", "VALIDATION_ERROR"));
+            return ResponseEntity.status(status).body(createErrorResponse(e.getMessage(), "VALIDATION_ERROR"));
         } catch (RuntimeException e) {
             logger.error("Registration error: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Registration failed", "code", "REGISTRATION_ERROR"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createErrorResponse("Registration failed", "REGISTRATION_ERROR"));
         }
     }
 
@@ -70,12 +77,12 @@ public class AuthController {
         } catch (IllegalArgumentException e) {
             logger.warn("Login validation failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                Map.of("error", "Invalid credentials", "code", "INVALID_CREDENTIALS")
+                createErrorResponse("Invalid credentials", "INVALID_CREDENTIALS")
             );
         } catch (RuntimeException e) {
             logger.error("Authentication error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                Map.of("error", "Authentication failed", "code", "AUTH_ERROR")
+                createErrorResponse("Authentication failed", "AUTH_ERROR")
             );
         }
     }
@@ -87,13 +94,13 @@ public class AuthController {
             if (u == null) {
                 logger.warn("User not authenticated when accessing profile");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Not authenticated", "code", "NOT_AUTHENTICATED"));
+                    .body(createErrorResponse("Not authenticated", "NOT_AUTHENTICATED"));
             }
             return ResponseEntity.ok(u);
         } catch (RuntimeException e) {
             logger.error("Error retrieving user profile: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to retrieve user profile", "code", "PROFILE_ERROR"));
+                .body(createErrorResponse("Failed to retrieve user profile", "PROFILE_ERROR"));
         }
     }
 
@@ -104,7 +111,7 @@ public class AuthController {
             if (current == null) {
                 logger.warn("Unauthorized update attempt");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Not authenticated"));
+                    .body(createErrorResponse("Not authenticated", "NOT_AUTHENTICATED"));
             }
 
             User updated = authService.updateUser(
@@ -122,11 +129,11 @@ public class AuthController {
         } catch (IllegalArgumentException e) {
             logger.warn("Profile update validation failed: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage(), "code", "VALIDATION_ERROR"));
+                .body(createErrorResponse(e.getMessage(), "VALIDATION_ERROR"));
         } catch (RuntimeException e) {
             logger.error("Profile update error: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
-                .body(Map.of("error", "Failed to update profile", "code", "UPDATE_ERROR"));
+                .body(createErrorResponse("Failed to update profile", "UPDATE_ERROR"));
         }
     }
 }

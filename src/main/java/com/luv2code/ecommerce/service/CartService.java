@@ -20,6 +20,9 @@ import java.util.Set;
 @Transactional
 public class CartService {
 
+    private static final int MIN_QUANTITY = 1;
+    private static final int MAX_CART_ITEMS = 1000;
+
     @Autowired
     private CartRepository cartRepository;
 
@@ -41,6 +44,10 @@ public class CartService {
         Cart cart = getCartByUserId(userId);
         Product prod = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+
+        if (quantity < MIN_QUANTITY) {
+            throw new IllegalArgumentException("Quantity must be at least " + MIN_QUANTITY);
+        }
 
         if (prod.getUnitsInStock() < quantity) {
             throw new RuntimeException("Out of stock");
@@ -64,7 +71,6 @@ public class CartService {
             item.setQuantity(quantity);
             item.setUnitPrice(prod.getUnitPrice());
             item = cartItemRepository.save(item);
-            if (cart.getCartItems() == null) cart.setCartItems(new HashSet<>());
             cart.getCartItems().add(item);
         }
         updateCartTotals(cart);
@@ -94,7 +100,9 @@ public class CartService {
             throw new RuntimeException("Wrong cart");
         }
 
-        if (quantity <= 0) throw new RuntimeException("Invalid qty");
+        if (quantity < MIN_QUANTITY) {
+            throw new IllegalArgumentException("Quantity must be at least " + MIN_QUANTITY);
+        }
 
         Product p = item.getProduct();
         if (p.getUnitsInStock() < quantity) {
