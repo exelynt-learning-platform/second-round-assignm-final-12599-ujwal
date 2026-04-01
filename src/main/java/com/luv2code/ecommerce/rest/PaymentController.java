@@ -5,6 +5,8 @@ import com.stripe.model.PaymentIntent;
 import com.luv2code.ecommerce.entity.Order;
 import com.luv2code.ecommerce.dao.OrderRepository;
 import com.luv2code.ecommerce.service.PaymentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,8 @@ import java.util.Map;
 @RequestMapping("/api/payments")
 @CrossOrigin(origins = "http://localhost:4200")
 public class PaymentController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentController.class);
 
     @Autowired
     private PaymentService paymentService;
@@ -58,9 +62,15 @@ public class PaymentController {
             return ResponseEntity.ok(response);
 
         } catch (StripeException e) {
+            logger.error("Stripe error creating payment intent: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse("Stripe error: " + e.getMessage()));
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid payment intent request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Invalid request: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            logger.error("Unexpected error creating payment intent: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Error: " + e.getMessage()));
         }
@@ -84,17 +94,19 @@ public class PaymentController {
             return ResponseEntity.ok(response);
 
         } catch (StripeException e) {
+            logger.error("Stripe error retrieving payment intent: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse("Stripe error: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid payment intent ID: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Invalid payment intent ID"));
+        } catch (RuntimeException e) {
+            logger.error("Error retrieving payment intent: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error retrieving payment intent"));
         }
     }
-
-    /**
-     * Update order status based on payment intent
-     * Request: POST /api/payments/update-order-status
-     * Body: { "paymentIntentId": "pi_..." }
-     */
-    @PostMapping("/update-order-status")
     public ResponseEntity<?> updateOrderStatus(@RequestBody Map<String, String> request) {
         try {
             String paymentIntentId = request.get("paymentIntentId");
@@ -108,16 +120,19 @@ public class PaymentController {
             return ResponseEntity.ok(response);
 
         } catch (StripeException e) {
+            logger.error("Stripe error updating order status: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse("Stripe error: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid order status update request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Invalid request: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            logger.error("Error updating order status: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error updating order status"));
         }
     }
-
-    /**
-     * Cancel a payment intent
-     * Request: POST /api/payments/cancel/{paymentIntentId}
-     */
-    @PostMapping("/cancel/{paymentIntentId}")
     public ResponseEntity<?> cancelPayment(@PathVariable String paymentIntentId) {
         try {
             PaymentIntent canceledIntent = paymentService.cancelPaymentIntent(paymentIntentId);
@@ -130,16 +145,19 @@ public class PaymentController {
             return ResponseEntity.ok(response);
 
         } catch (StripeException e) {
+            logger.error("Stripe error canceling payment: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse("Stripe error: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid cancel payment request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Invalid payment intent ID"));
+        } catch (RuntimeException e) {
+            logger.error("Error canceling payment: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Error canceling payment"));
         }
     }
-
-    /**
-     * Get Stripe publishable key
-     * Request: GET /api/payments/config
-     */
-    @GetMapping("/config")
     public ResponseEntity<?> getConfig() {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Stripe config endpoint. Use publishable key from frontend environment.");
@@ -159,14 +177,5 @@ public class PaymentController {
     // Helper method to generate order tracking number
     private String generateOrderTrackingNumber() {
         return "ORD-" + System.currentTimeMillis();
-    }
-
-    // Inner class for error response
-    public static class ErrorResponse {
-        public String error;
-
-        public ErrorResponse(String error) {
-            this.error = error;
-        }
     }
 }
