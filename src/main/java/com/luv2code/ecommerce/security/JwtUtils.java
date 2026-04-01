@@ -1,6 +1,8 @@
 package com.luv2code.ecommerce.security;
 
 import com.luv2code.ecommerce.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,8 @@ import java.util.Date;
 
 @Component
 public class JwtUtils {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
     @Value("${app.jwtSecret:mySecretKeyForJWTTokenGenerationAndValidation12345}")
     private String jwtSecret;
@@ -95,15 +99,15 @@ public class JwtUtils {
                     .parseClaimsJws(token);
             return true;
         } catch (io.jsonwebtoken.security.SecurityException e) {
-            System.err.println("Invalid JWT signature: " + e.getMessage());
+            logger.warn("Invalid JWT signature: {}", e.getMessage());
         } catch (io.jsonwebtoken.MalformedJwtException e) {
-            System.err.println("Invalid JWT token: " + e.getMessage());
+            logger.warn("Invalid JWT token: {}", e.getMessage());
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            System.err.println("Expired JWT token: " + e.getMessage());
+            logger.warn("Expired JWT token: {}", e.getMessage());
         } catch (io.jsonwebtoken.UnsupportedJwtException e) {
-            System.err.println("Unsupported JWT token: " + e.getMessage());
+            logger.warn("Unsupported JWT token: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("JWT claims string is empty: " + e.getMessage());
+            logger.warn("JWT claims string is empty: {}", e.getMessage());
         }
         return false;
     }

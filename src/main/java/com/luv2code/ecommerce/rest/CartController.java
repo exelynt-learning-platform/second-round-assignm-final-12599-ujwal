@@ -9,6 +9,8 @@ import com.luv2code.ecommerce.entity.CartItem;
 import com.luv2code.ecommerce.entity.User;
 import com.luv2code.ecommerce.service.CartService;
 import com.luv2code.ecommerce.service.AuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,8 @@ import java.util.*;
 @PreAuthorize("isAuthenticated()")
 public class CartController {
 
+    private static final Logger logger = LoggerFactory.getLogger(CartController.class);
+
     @Autowired
     private CartService cartService;
 
@@ -40,6 +44,7 @@ public class CartController {
         try {
             User user = authService.getCurrentUser();
             if (user == null) {
+                logger.warn("Unauthorized cart access attempt");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User not authenticated"));
             }
 
@@ -49,7 +54,11 @@ public class CartController {
 
             return ResponseEntity.ok(response);
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            logger.warn("Cart retrieval validation error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
+        } catch (RuntimeException e) {
+            logger.error("Error retrieving cart: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Failed to retrieve cart"));
         }
     }
@@ -63,6 +72,7 @@ public class CartController {
         try {
             User user = authService.getCurrentUser();
             if (user == null) {
+                logger.warn("Unauthorized add to cart attempt");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User not authenticated"));
             }
 
@@ -78,10 +88,12 @@ public class CartController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
+            logger.warn("Add to cart validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Failed to add product to cart"));
+        } catch (RuntimeException e) {
+            logger.error("Error adding product to cart: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
         }
     }
 
@@ -96,6 +108,7 @@ public class CartController {
         try {
             User user = authService.getCurrentUser();
             if (user == null) {
+                logger.warn("Unauthorized cart update attempt");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User not authenticated"));
             }
 
@@ -111,10 +124,12 @@ public class CartController {
 
             return ResponseEntity.ok(response);
 
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
+            logger.warn("Cart update validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Failed to update cart"));
+        } catch (RuntimeException e) {
+            logger.error("Error updating cart item: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
         }
     }
 
@@ -127,6 +142,7 @@ public class CartController {
         try {
             User user = authService.getCurrentUser();
             if (user == null) {
+                logger.warn("Unauthorized cart removal attempt");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User not authenticated"));
             }
 
@@ -142,10 +158,12 @@ public class CartController {
 
             return ResponseEntity.ok(response);
 
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
+            logger.warn("Cart removal validation error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Failed to remove product"));
+        } catch (RuntimeException e) {
+            logger.error("Error removing product from cart: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
         }
     }
 
@@ -158,6 +176,7 @@ public class CartController {
         try {
             User user = authService.getCurrentUser();
             if (user == null) {
+                logger.warn("Unauthorized cart clear attempt");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("User not authenticated"));
             }
 
@@ -168,7 +187,8 @@ public class CartController {
 
             return ResponseEntity.ok(response);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            logger.error("Error clearing cart: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Failed to clear cart"));
         }
     }
